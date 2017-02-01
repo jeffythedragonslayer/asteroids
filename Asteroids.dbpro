@@ -1,0 +1,44 @@
+; **** DarkBASIC Professional Project ****
+; Created by CodeSurge IDE
+version=DBP1.00
+project name=Asteroids
+
+; ****Source file information****
+main=Asteroids.dba
+include1=Menu.dba
+include2=Hi Scores.dba
+include3=Library.dba
+final source=_Temp.dbsource
+
+;***Executable filename***
+executable=Asteroids.exe
+build type=media
+
+compression=YES
+encryption=NO
+card options window=YES
+
+; Debugger
+CLI=NO
+
+; *****Display Settings*****
+app title=Asteroids
+graphics mode=window
+fullscreen resolution=640x480x16M
+window resolution=640x480
+
+
+;*****Media files, icons, cursors*****
+media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Asteroids\
+
+;****Version Information****
+VerComments=
+VerCompany=Dragonware Games
+VerFileDesc=Asteroids
+VerFileNumber=
+VerInternal=Asteroids.exe
+VerCopyright=Copyright (C) Dragonware Games 2007
+VerTrademark=
+VerFilename=Asteroids.exe
+VerProduct=Asteroids
+VerProductNumber=v1.0

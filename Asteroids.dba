@@ -1,0 +1,897 @@
+Rem Project: Asteroids
+Rem Created: 10/9/2006 3:48:47 PM
+
+Rem ***** Main Source File *****
+
+disable escapekey
+
+rem Standard Setup Code
+sync on : sync rate 60
+backdrop off : hide mouse: autocam off
+set text font "slikscreen" : set text size 12 : set text transparent
+randomize timer()
+
+global ship_speed_x as float
+global ship_speed_y as float
+global ship_x as float
+global ship_y as float
+global invader_x as float
+global invader_y as float
+global invader_speed_x as float
+global invader_speed_y as float
+global invader_cool as integer
+global cool as integer
+global ship_alive as boolean
+global fuel as integer
+global ammo as integer
+global respawndelay as integer
+global hyperspacetime as integer
+global lives as integer
+global timetoflash as integer
+global hyperspacecharge as integer
+global hyperspacealreadycharged as integer
+global autohyperspace as integer
+global levelup as integer
+global leveluptime as integer
+global level as integer
+global score as integer
+global dispscore as integer
+global gameisover as integer
+global invadertime as integer
+global pickuptime as integer
+global entername as string
+global stillon as boolean
+global paused as boolean
+#constant maxfuel = 400
+#constant maxammo = 20
+#constant maxbulletlife = 100
+#constant maxinvaderbulletlife = 200
+#constant guncool = 30
+#constant invaderguncool = 150
+#constant rocks = 5
+#constant respawntime = 100
+#constant subdivide = 2
+#constant hyperspaceclock = 250
+#constant maxlives = 5
+#constant hyperspaceconsumption = 700
+#constant pickupdelay = 100
+set dir "Media"
+load sound "Rematerialization.wav", 1
+load sound "Bomb near.wav", 2
+load sound "Razor Slate.wav", 3
+load sound "Large Explosion 1.wav", 4
+load sound "Teleport.wav", 5
+load sound "Jet loop.wav", 6
+load sound "Magic Tree.wav", 7
+load sound "Beam.wav", 8
+load sound "Space Gen loop 1.wav", 9
+load sound "Button 2.wav", 10
+load music "music space.mp3", 1
+loop music 1
+
+rem load and make the backdrop
+load image "backdrop.bmp", 1, 1
+
+rem load and make the ship
+set image colorkey 255, 0, 255
+load image "ship_thrust.bmp", 2, 1
+load image "ship_drift.bmp", 14, 1
+load image "ship_retro.bmp", 15, 1
+sprite 2, 0, 0, 2
+set sprite 2, 0, 1
+offset sprite 2, 11.5, 15.5
+flip sprite 2
+
+rem make the bullets
+load image "bullet1.bmp", 3, 1
+load image "bullet2.bmp", 17, 1
+type bullet
+   id as integer
+   life as integer
+   speed as float
+endtype
+dim bullets(-1) as bullet
+
+rem make the asteroids
+set image colorkey 0, 255, 0
+load image "asteroids.bmp", 4, 1
+paste image 4, 0, 0
+delete image 4
+set image colorkey 255, 0, 255
+for count = 0 to 7
+   get image count + 4, count * 39.875, 0, (count + 1) * 39.875 - 1, 39, 1
+next count
+
+type asteroid
+   id as integer
+   size as integer
+   speed_x as float
+   speed_y as float
+   x as float
+   y as float
+endtype
+dim asteroids(-1) as asteroid
+
+rem make the explosions
+load image "explosion.bmp", 13, 1
+
+type explosion
+   id as integer
+endtype
+dim explosions(-1) as explosion
+
+rem load the invader
+load image "Invader.bmp", 16, 1
+create animated sprite 3, "Invader.bmp", 2, 1, 16
+sprite 3, 0, 0, 16
+offset sprite 3, 8, 21.5
+
+rem load the pickups
+load image "Life.bmp", 18, 1
+load image "Fuel.bmp", 19, 1
+load image "Ammo.bmp", 20, 1
+load image "Silver.bmp", 21, 1
+
+type pickup
+   id as integer
+   #constant pickupLife = 1
+   #constant pickupFuel = 2
+   #constant pickupAmmo = 3
+   #constant pickupHyperspace = 4
+   kind as integer
+endtype
+
+dim pickups(-1) as pickup
+
+init_main_menu()
+set dir ".."
+
+load_scores()
+
+main_menu()
+
+restart:
+
+ ship_speed_x = 0
+ ship_speed_y = 0
+ ship_x = 0
+ ship_y = 0
+ invader_x = 0
+ invader_y = 0
+ invader_speed_x = 0
+ invader_speed_y = 0
+ invader_cool = 0
+ cool = 0
+ ship_alive = 0
+ fuel = 0
+ ammo = 0
+ respawndelay = 0
+ hyperspacetime = 0
+ lives = 0
+ timetoflash = 0
+ hyperspacecharge = 0
+ hyperspacealreadycharged = 0
+ autohyperspace = 0
+ levelup = 0
+ leveluptime = 0
+ level = 0
+ score = 0
+ dispscore = 0
+ gameisover = 0
+ invadertime = 0
+ pickuptime = 0
+
+
+lives = maxlives
+invadertime = 100
+respawn()
+level_up()
+
+` main loop
+do
+   rem show the backdrop
+   paste image 1, 0, 0
+   
+   if paused = 0
+
+   if gameisover
+      if gameover() = 1 then goto restart
+   else
+      if ship_alive
+         update_ship()
+      else
+         dec respawndelay
+         if respawndelay <= 0 then respawn()
+      endif
+      update_bullets()
+      if levelup
+         if leveluptime > 0
+            dec leveluptime
+         else
+            level_up()
+         endif
+      endif
+   endif
+   if invadertime <= 0
+      update_invader()
+   else
+      dec invadertime
+      if invadertime <= 0
+         repeat
+            invader_speed_x = rnd(2) - 1
+            invader_speed_y = rnd(2) - 1
+         until invader_speed_x <> 0 or invader_speed_y <> 0
+         invader_x = rnd(640)
+         invader_y = rnd(480)
+         show sprite 3
+         sprite 3, invader_x, invader_y, 17
+         loop sound 9
+      endif
+   endif
+
+   update_asteroids()
+   update_pickups()
+   update_explosions()
+   
+   
+    if keystate(197) = 0
+      stillon = 0
+    endif
+    if stillon = 0
+      if keystate(197)
+        paused = 1
+        stillon = 1
+      endif
+    endif
+   
+   else
+      ink -1, -1
+      center text 320, 240, "Paused"
+      if keystate(197) = 0
+        stillon = 0
+      endif
+      if stillon = 0
+        if keystate(197) = 1
+          paused = 0
+          stillon = 1
+        endif
+      endif
+   endif
+
+   rem draw the heads up display before rendering the sprites
+   HUD()
+   sync
+
+loop
+function update_pickups()
+   local x as integer
+   local y as integer
+   local toofull as boolean
+
+   if pickuptime <= 0
+      if array count(pickups(0)) < 5
+         array insert at bottom pickups(0)
+         pickups().id = free_spr()
+
+         rem decide which pickup it should be
+         if rnd(5) = 5
+            pickups().kind = pickupLife
+         else
+            if rnd(6) = 6
+               pickups().kind = pickupHyperspace
+            else
+               if rnd(1) = 1
+                  pickups().kind = pickupFuel
+               else
+                  pickups().kind = pickupAmmo
+               endif
+            endif
+         endif
+
+         sprite pickups().id, rnd(640), rnd(480), 17 + pickups().kind
+         rotate sprite pickups().id, rnd(360)
+
+         rem get the right offset
+         select pickups().kind
+            case pickupFuel
+               x = 11.5
+               y = 5
+            endcase
+            case pickupLife
+               x = 21
+               y = 9
+            endcase
+            case pickupAmmo
+               x = 21
+               y = 9
+            endcase
+            case pickupHyperspace
+               x = 0
+               y = 0
+            endcase
+         endselect
+         offset sprite pickups().id, x, y
+      endif
+      pickuptime = pickupdelay
+   else
+      dec pickuptime
+   endif
+
+   array index to top pickups(0)
+   do
+      if array index valid(pickups(0)) = 0 then exitfunction
+
+      move sprite pickups().id, 1
+
+      rem wrap the pickup
+      if sprite x(pickups().id) < 0 then sprite pickups().id, 640, sprite y(pickups().id), 17 + pickups().kind
+      if sprite x(pickups().id) > 640 then sprite pickups().id, 0, sprite y(pickups().id), 17 + pickups().kind
+      if sprite y(pickups().id) < 0 then sprite pickups().id, sprite x(pickups().id), 480, 17 + pickups().kind
+      if sprite y(pickups().id) > 480 then sprite pickups().id, sprite x(pickups().id), 0, 17 + pickups().kind
+
+      rem if the pickup hits the ship, get the pickup
+      if sprite collision(2, pickups().id) and ship_alive and hyperspacetime <= 0
+         select pickups().kind
+            case pickupFuel
+               if fuel => maxfuel
+                  toofull = 1
+               else
+                  inc fuel, 150
+                  play sound 10
+                  if fuel > maxfuel then fuel = maxfuel
+               endif
+            endcase
+            case pickupLife
+               if lives => maxlives - 1
+                  toofull = 1
+               else
+                  inc lives
+                  play sound 10
+               endif
+            endcase
+            case pickupAmmo
+               if ammo => maxammo
+                  toofull = 1
+               else
+                  inc ammo, 10
+                  play sound 10
+                  if ammo > maxammo then ammo = maxammo
+               endif
+            endcase
+            case pickuphyperspace
+               if hyperspacecharge => hyperspaceconsumption
+                  toofull = 1
+               else
+                  hyperspacecharge = hyperspaceconsumption
+                  hyperspacealreadycharged = 0
+               endif
+            endcase
+         endselect
+         if toofull
+            next array index pickups(0)
+            toofull = 0
+         else
+            delete sprite pickups().id
+            array delete element pickups().id
+         endif
+      else
+         next array index pickups(0)
+      endif
+
+   loop
+endfunction
+function update_invader()
+
+      rem time to fly across the screen
+      play sprite 3, 1, 2, 100
+      inc invader_x, invader_speed_x
+      inc invader_y, invader_speed_y
+      sprite 3, invader_x, invader_y, 16
+
+      rem wrap the invader
+      if invader_x < 0 then invader_x = 640
+      if invader_x > 640 then invader_x = 0
+      if invader_y < 0 then invader_y = 480
+      if invader_y > 480 then invader_y = 0
+
+      dec invader_cool
+      if invader_cool <= 0 and ship_alive and hyperspacetime <= 50
+         rem time to shoot
+         invader_cool = invaderguncool
+
+         array insert at bottom bullets(0)
+         bullets().id = free_spr()
+         bullets().life = maxinvaderbulletlife
+
+         sprite bullets().id, invader_x, invader_y, 17
+         offset sprite bullets().id, 3.5, 3.5
+         rotate sprite bullets().id, 180 - atanfull(sprite x(2) - sprite x(3), sprite y(2) - sprite y(3))
+
+         rem make the bullet start moving
+         bullets().speed = 3
+         move sprite bullets().id, 20
+
+         play sound 8
+
+      endif
+endfunction
+function HUD()
+   local floatingpoint as float
+
+   rem level
+   ink -1, 0
+   center text 320, 10, "Level " + str$(level)
+
+   rem score
+   if dispscore < score - 200
+      inc dispscore, 7
+   else
+      if dispscore < score then inc dispscore
+   endif
+   text 10, 10, "Score: " + cstr$(dispscore)
+
+   rem lives
+   for count = 1 to lives
+      paste image 14, 630 - (count * 35) , 10, 1
+   next count
+
+   rem ammo
+   if ammo
+      text 10, 440, "Ammo: " + str$(ammo)
+   else
+      ink rgb(255, 0, 0), 0
+      text 10, 440, "No Ammo"
+   endif
+
+   rem fuel
+   if fuel
+      ink -1, 0
+      text 10, 460, "Fuel"
+      box 40, 460, 40 + fuel, 470, rgb(255, 0, 0),  rgb(255, 0, 0),  rgb(0, 255, 0),  rgb(0, 255, 0)
+   else
+      ink rgb(255, 0, 0), 0
+      text 10, 460, "No Fuel"
+   endif
+
+   rem hyperspace
+   ink rgb(0, 0, 255), 0
+   if hyperspacecharge => hyperspaceconsumption
+      box 595, 470 - (230 - text height("hyperspace")), 605, 470, rgb(255, 0, 0), rgb(0, 0, 255), rgb(255, 0, 0), rgb(0, 0, 255)
+      if hyperspacealreadycharged = 0 then play sound 7
+      hyperspacealreadycharged = 1
+   else
+      floatingpoint = hyperspacecharge
+      box 595, 470 - (floatingpoint / hyperspaceconsumption) * (230 - text height("hyperspace")), 605, 470, rgb(255, 0, 0), rgb(0, 0, 255), rgb(255, 0, 0), rgb(0, 0, 255)
+      ink rgb(255, 0, 0), 0
+   endif
+   text 630 - text width("hyperspace"), 230, "hyperspace"
+
+   dec autohyperspace
+   if autohyperspace => 0
+      ink -1, 0
+      center text 320, 240, "Auto Hyperspace Engaged"
+   endif
+
+endfunction
+function gameover()
+
+   entername = entry$(1)
+
+   ink -1, 0
+   dispscore = score
+   center text 320, 240, "Game Over"
+   center text 320, 270, "Enter your name:"
+   if (timer()/500) mod 2 = 1
+     text 290, 290, entername + "_"
+   else
+     text 290, 290, entername
+   endif
+
+   if right$(entername, 1) = ","
+    clear entry buffer
+    entername = ""
+   endif
+
+   if returnkey() and len(entername) > 1
+     entername = left$(entername, len(entername) - 1)
+     
+     array insert at bottom hiscores(0)
+     hiscores().player = entername
+     hiscores().score = score
+     hiscores().time = get time$()
+     hiscores().date = get date$()
+     sort()
+     save_scores()
+     main_menu()
+     exitfunction 1
+   endif
+endfunction 0
+function respawn()
+   if lives = 0
+      gameisover = 1
+      clear entry buffer
+      exitfunction
+   endif
+   play sound 1
+   dec lives
+   fuel = maxfuel
+   ammo = maxammo
+   ship_alive = 1
+   ship_x = 320
+   ship_y = 240
+   ship_speed_x = 0
+   ship_speed_y = 0
+   show sprite 2
+   rotate sprite 2, 0
+   sprite 2, ship_x, ship_y, 14
+   hyperspacetime = hyperspaceclock - 50
+   hyperspacecharge = 0
+   set sprite alpha 2, 64
+endfunction
+function hyperspace()
+   if hyperspacecharge < hyperspaceconsumption or hyperspacetime then exitfunction
+   hyperspacetime = hyperspaceclock
+   set sprite alpha 2, 64
+   hyperspacecharge = 0
+   hyperspacealreadycharged = 0
+   play sound 5
+endfunction
+function update_ship()
+   local movenow as boolean
+
+   rem hyperspace
+   if controlkey() then hyperspace()
+
+   rem rotate ship
+   rotate sprite 2, sprite angle(2) + (rightkey() - leftkey()) * 3
+
+   rem control ship
+   set sprite image 2, 14
+   if fuel > 0
+      if upkey()
+         dec fuel
+         inc ship_speed_x, -cos(90 - sprite angle(2)) / 10
+         inc ship_speed_y, cos(sprite angle(2)) / 10
+         set sprite image 2, 2
+         movenow = 1
+      endif
+      if downkey()
+         dec fuel
+         dec ship_speed_x, -cos(90 - sprite angle(2)) / 10
+         dec ship_speed_y, cos(sprite angle(2)) / 10
+         set sprite image 2, 15
+         movenow = 1
+      endif
+      if movenow = 1
+         if sound looping(6) = 0 then loop sound 6
+      else
+         stop sound 6
+      endif
+   else
+      if sound looping(6) then stop sound 6
+   endif
+
+   rem move ship
+   inc ship_x, ship_speed_x
+   inc ship_y, ship_speed_y
+
+   rem wrap the ship
+   if ship_x < 0 then ship_x =  640
+   if ship_x > 640 then ship_x = 0
+   if ship_y < 0 then ship_y = 480
+   if ship_y > 480 then ship_y = 0
+
+   rem update ship position
+   sprite 2, ship_x, ship_y, sprite image(2)
+
+   rem shoot bullets
+   if hyperspacetime <= 0
+      dec cool
+      inc hyperspacecharge
+      if spacekey() and cool <= 0 and ammo > 0
+         cool = guncool
+         dec ammo
+
+         array insert at bottom bullets(0)
+         bullets().id = free_spr()
+         bullets().life = maxbulletlife
+
+         sprite bullets().id, ship_x, ship_y, 3
+         offset sprite bullets().id, 3.5, 3.5
+         rotate sprite bullets().id, 180 + sprite angle(2)
+
+         rem make the bullet start moving
+         bullets().speed = ship_speed_x + ship_speed_y + 10
+         move sprite bullets().id, 30
+
+         play sound 3
+      endif
+
+      rem if the ship hits the invader, explode the ship and the invader
+      if sprite collision(2, 3)
+         rem only get 100 points because it was a kamakaize attack
+         explode_invader(100)
+         explode_ship()
+      endif
+   else
+      dec hyperspacetime
+      if hyperspacetime <= 0
+         set sprite alpha 2, 255
+      else
+         if hyperspacetime < 100
+            if timetoflash <= 0
+               if sprite alpha(2) = 255
+                  set sprite alpha 2, 64
+               else
+                  set sprite alpha 2, 255
+               endif
+               timetoflash = 2
+            endif
+            dec timetoflash
+         endif
+      endif
+   endif
+
+endfunction
+function update_bullets()
+   rem move bullets
+   array index to top bullets(0)
+   do
+      if array index valid(bullets(0)) = 0 then exit
+
+      rem if the bullets run out of life, make them dissapear
+      dec bullets().life
+      if bullets().life <= 0
+         rem make bullet dissapear
+         delete sprite bullets().id
+         array delete element bullets(0)
+      else
+         rem move the bullet
+         move sprite bullets().id, bullets().speed
+
+         rem wrap the bullet
+         if sprite x(bullets().id) < 0 then sprite bullets().id, 640, sprite y(bullets().id), sprite image(bullets().id)
+         if sprite x(bullets().id) > 640 then sprite bullets().id, 0, sprite y(bullets().id), sprite image(bullets().id)
+         if sprite y(bullets().id) < 0 then sprite bullets().id, sprite x(bullets().id), 480 , sprite image(bullets().id)
+         if sprite y(bullets().id) > 480 then sprite bullets().id, sprite x(bullets().id), 0, sprite image(bullets().id)
+
+         rem check if the bullet is hitting anything
+         bullet_collision()
+
+         next array index bullets(0)
+      endif
+
+   loop
+endfunction
+function bullet_collision()
+   rem check each asteroid and see if it's colliding with the bullet
+   array index to top asteroids(0)
+   do
+      if array index valid(asteroids(0)) = 0 then exit
+
+      if sprite collision(bullets().id, asteroids().id)
+         explode_asteroid()
+         exitfunction
+      endif
+
+      next array index asteroids(0)
+   loop
+
+   rem if it hits the ship, explode the ship
+   if ship_alive
+      if hyperspacetime <= 0
+         if sprite collision(bullets().id, 2)
+            explode_ship()
+            delete sprite bullets().id
+            array delete element bullets(0)
+            exitfunction
+         endif
+      endif
+   endif
+
+   rem if it hits the invader, make the invader explode
+   if invadertime <= 0 and sprite collision(bullets().id, 3) and sprite image(bullets().id) <> 17
+      explode_invader(200)
+      delete sprite bullets().id
+      array delete element bullets(0)
+      exitfunction
+   endif
+
+endfunction
+function explode_invader(points as boolean)
+   invadertime = (2000 / level) + rnd(400)
+   inc score, points
+   make_explosion(invader_x, invader_y)
+   hide sprite 3
+   play sound 4
+   stop sound 9
+endfunction
+function update_asteroids()
+   rem move asteroids
+   array index to top asteroids(0)
+   do
+      if array index valid(asteroids(0)) = 0 then exit
+
+      rem rotate the asteroid
+      rotate sprite asteroids().id, sprite angle(asteroids().id) + 1
+
+      rem move the asteroid
+      inc asteroids().x, asteroids().speed_x
+      inc asteroids().y, asteroids().speed_y
+
+      rem wrap the asteroid
+      if asteroids().x < 0 then asteroids().x =  640
+      if asteroids().x > 640 then asteroids().x = 0
+      if asteroids().y < 0 then asteroids().y = 480
+      if asteroids().y > 480 then asteroids().y = 0
+
+      rem update asteroid position
+      sprite asteroids().id, asteroids().x, asteroids().y, sprite image(asteroids().id)
+
+      rem if the asteroid hits the ship, make the ship explode
+      if ship_alive
+         if hyperspacetime <= 0
+            if sprite collision(asteroids().id, 2)
+               if sprite_distance(asteroids().id, 2) < 225
+                  explode_ship()
+               endif
+            endif
+         endif
+      endif
+      if invadertime <= 0
+         if sprite collision(asteroids().id, 3)
+            explode_invader(0)
+         endif
+      endif
+
+      next array index asteroids(0)
+
+   loop
+endfunction
+function explode_asteroid()
+   local size as integer
+   local x as integer
+   local y as integer
+   rem explode the asteroid in question, and make two smaller ones
+   size = asteroids().size
+   x = asteroids().x
+   y = asteroids().y
+   delete sprite asteroids().id
+   array delete element asteroids(0)
+
+   rem if the bullet was from the player, give points
+   if sprite image(bullets().id) = 3 then inc score, size
+
+   rem make the bullet dissapear
+   delete sprite bullets().id
+   array delete element bullets()
+
+   play sound 2
+
+   rem make two smaller asteroids only if they will be big enough
+   if size > 50
+      for count = 1 to subdivide
+         array insert at bottom asteroids()
+         asteroids().id = free_spr()
+         asteroids().size = (size / 3) * 2
+
+         rem give the new asteroid the same coordiantes of the bigger one but a different direction
+         asteroids().x = x
+         asteroids().y = y
+         sprite asteroids().id, asteroids().x, asteroids().y, rnd(7) + 4
+         offset sprite asteroids().id, 17.5, 17
+         scale sprite asteroids().id, asteroids().size
+
+         this_way = rnd(360)
+         asteroids().speed_x = sin(this_way) * (1 + (level / 2))
+         asteroids().speed_y = cos(this_way) * (1 + (level / 2))
+
+      next count
+   else
+      if array count(asteroids(0)) = -1
+         levelup = 1
+         leveluptime = 100
+      endif
+   endif
+
+
+
+   rem make an explosion
+   make_explosion(x, y)
+
+endfunction
+function update_explosions()
+   array index to top explosions()
+   do
+      if array index valid(explosions(0)) = 0 then exit
+
+      rem play the animation
+      play sprite explosions().id, 1, 15, 40
+
+      rem make the explosion dissapear when it's done
+      if sprite frame(explosions().id) = 15
+         delete sprite explosions().id
+         array delete element explosions()
+      else
+         next array index explosions()
+      endif
+   loop
+
+endfunction
+function level_up()
+   local this_way as float
+
+   delete_bullets()
+
+   levelup = 0
+   ship_x = 320
+   ship_y = 240
+   ship_speed_x = 0
+   ship_speed_y = 0
+   hyperspacetime = hyperspaceclock
+   sprite 2, ship_x, ship_y, 14
+   set sprite alpha 2, 64
+
+   rem make some asteroids
+   empty array asteroids(0)
+   for count = 1 to rocks
+
+      array insert at bottom asteroids(0)
+      asteroids().id = free_spr()
+      asteroids().size = 100
+
+      asteroids().x = rnd(640)
+      asteroids().y = rnd(480)
+      sprite asteroids().id, asteroids().x, asteroids().y, rnd(7) + 4
+      offset sprite asteroids().id, 17.5, 17
+      scale sprite asteroids().id, asteroids().size
+
+      this_way = rnd(360)
+      asteroids().speed_x = sin(this_way) * (1 + (level / 2))
+      asteroids().speed_y = cos(this_way) * (1 + (level / 2))
+
+   next count
+
+   inc level
+
+endfunction
+function delete_bullets()
+   array index to top bullets(0)
+   do
+      if array index valid(bullets(0)) = 0 then exitfunction
+
+      delete sprite bullets().id
+      array delete element bullets()
+
+   loop
+endfunction
+function make_explosion(x as integer, y as integer)
+   rem make an explosion
+   array insert at bottom explosions(0)
+   explosions().id = free_spr()
+   set dir "Media"
+   create animated sprite explosions().id, "explosion.bmp", 16, 1, 13
+   set dir ".."
+   sprite explosions().id, x, y, 13
+   set sprite explosions().id, 0, 1
+   offset sprite explosions().id, 47.9375, 23.5
+   rotate sprite explosions().id, rnd(360)
+endfunction
+function explode_ship()
+   rem auto hyperspace
+   if hyperspacecharge => hyperspaceconsumption
+      autohyperspace = 200
+      hyperspace()
+      exitfunction
+   endif
+   ship_alive = 0
+   respawndelay = respawntime
+   make_explosion(ship_x, ship_y)
+   hide sprite 2
+   play sound 4
+   stop sound 6
+endfunction
+function sprite_distance(sprite1 as integer, sprite2 as integer)
+   local distance as integer
+   distance = (sprite x(sprite1) - sprite x(sprite2)) ^ 2 + (sprite y(sprite1) - sprite y(sprite2))
+endfunction distance

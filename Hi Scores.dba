@@ -1,0 +1,175 @@
+Rem *** Include File: Hi Scores.dba ***
+Rem Created: 11/4/2006 9:27:47 PM
+
+Rem Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Asteroids\Asteroids.dbpro
+
+type hiscore
+   score as dword
+   player as string
+   date as string
+   time as string
+endtype
+
+function load_scores()
+local str as string
+
+`make the hi scores array
+dim hiscores(-1) as hiscore
+
+empty array hiscores(0)
+
+`make the file if it doesn't exist
+if file exist("Hi Scores.ini") = 0 then exitfunction
+
+`load the array
+open to read 1, "Hi Scores.ini"
+
+do
+    read string 1, str
+    csv$(str)
+    
+    if len(str) < 3 then exit
+
+    array insert at bottom hiscores(0)
+
+    hiscores().score = val(csv$(""))
+    hiscores().player = csv$("")
+    hiscores().date = csv$("")
+    hiscores().time = csv$("")
+     
+loop
+
+close file 1
+
+sort()
+
+endfunction
+
+
+function save_scores()
+local count as dword
+
+`save the array
+if file exist("Hi Scores.ini") then delete file "Hi Scores.ini"
+open to write 1, "Hi Scores.ini"
+
+array index to top hiscores(0)
+
+for count = 0 to array count(hiscores(0))
+    write string 1, str$(hiscores(count).score) + "," + hiscores(count).player + "," + hiscores(count).date + "," + hiscores(count).time
+next count
+
+close file 1
+
+endfunction
+
+function scores_menu()
+
+  ink -1, -1
+
+  do
+    cls
+    paste image 1, 0, 0
+  
+    if spacekey() then exitfunction
+    
+    dec cstart, (mousemovez() / 120)
+    if cstart < 0
+      cstart = 0
+    else
+      if array count(hiscores(0)) <= 11
+        cstart = 0
+      else
+        if cstart + 11 > array count(hiscores(0))
+          cstart = array count(hiscores(0)) - 11
+        endif
+      endif
+    endif
+    
+    set text size 32
+    center text 280, 10, "Hi Scores"
+    set text size 16
+    
+    text 20, 40, "Player"
+    text 210, 40, "Score"
+    text 300, 40, "Date"
+    text 450, 40, "Time"
+    text 550, 40, "Rank"
+    
+    for count = 0 to 11
+      ncount = count + cstart
+      if ncount => 0 and ncount <= array count(hiscores(0))
+        rcount = array count(hiscores(0)) - ncount
+        text 20, 60 + count * text height("2") * 1.5, hiscores(rcount).player
+        text 210, 60 + count * text height("2") * 1.5, cstr$(hiscores(rcount).score)
+        text 300, 60 + count * text height("2") * 1.5, readable_date$(hiscores(rcount).date)
+        text 450, 60 + count * text height("2") * 1.5, readable_time$(hiscores(rcount).time)
+        text 550, 60 + count * text height("2") * 1.5, str$(ncount + 1)
+      endif
+    next count
+    
+    text 20, 400, "Press space to return to the main menu."
+    
+    sync
+  loop
+endfunction
+
+function sort()
+  if array count(hiscores(0)) > 0
+    if array count(hiscores(0)) = 1
+      if hiscores(0).score > hiscores(1).score
+        swap_scores(0, 1)
+      endif
+    else
+      quicksort(0, array count(hiscores(0)))
+    endif
+  endif
+endfunction
+
+function quicksort(left as integer, right as integer)
+   local i as integer
+   local j as integer
+   local x as dword
+   local y as dword
+   local str as string
+
+   i = left
+   j = right
+   x = hiscores((left + right)/2).score
+   repeat
+      while i<right and i < array count(hiscores())
+         if hiscores(i).score >= x then exit
+         inc i
+      endwhile
+      while j>left and j > -1
+        if x >= hiscores(j).score then exit
+        dec j
+      endwhile
+      if i<=j
+        swap_scores(i, j)
+        inc i
+        dec j
+      endif
+   until i > j
+
+   if left < j then quicksort(left, j)
+   if i < right then quicksort(i, right)
+endfunction
+
+function swap_scores(i as dword, j as dword)
+  local y as dword
+  local str as string
+  
+  y = hiscores(i).score
+  hiscores(i).score = hiscores(j).score
+  hiscores(j).score = y
+  str = hiscores(i).player
+  hiscores(i).player = hiscores(j).player
+  hiscores(j).player = str
+  str = hiscores(i).date
+  hiscores(i).date = hiscores(j).date
+  hiscores(j).date = str
+  str = hiscores(i).time
+  hiscores(i).time = hiscores(j).time
+  hiscores(j).time = str
+endfunction

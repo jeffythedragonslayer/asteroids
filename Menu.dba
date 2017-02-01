@@ -1,0 +1,162 @@
+Rem *** Include File: Menu.dba ***
+Rem Created: 10/29/2006 9:50:27 AM
+
+Rem Included inProject: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Asteroids\Asteroids.dbpro
+
+global img_cursor as dword
+global spr_cursor as dword
+global spr_play as dword
+global img_play as dword
+global spr_quit as dword
+global img_quit as dword
+global spr_scores as dword
+global img_scores as dword
+
+function init_main_menu()
+
+  img_play = load_img("Play.jpg", 1)
+  img_scores = load_img("Hi Scores.jpg", 1)
+  img_quit = load_img("Quit.jpg", 1)
+
+endfunction
+
+function main_menu()
+
+   hide all sprites
+   cls rgb(255, 0, 255)
+
+   spr_play = make_spr(0, 0, img_play)
+   sprite spr_play, 320 - sprite width(spr_play) / 2, 200, img_play
+   set sprite alpha spr_play, 80
+   
+   spr_scores = make_spr(0, 0, img_scores)
+   sprite spr_scores, 320 - sprite width(spr_scores) / 2, 300, img_scores
+   set sprite alpha spr_scores, 80
+   
+   spr_quit = make_spr(0, 0, img_quit)
+   sprite spr_quit, 320 - sprite width(spr_quit) / 2, 400, img_quit
+   set sprite alpha spr_quit, 80
+
+   ink rgb(255, 0, 0), 0
+   circle 5, 5, 5
+   line 5, 0, 5, 10
+   line 0, 5, 10, 5
+   img_cursor = get_img(0, 0, 11, 11, 1)
+   spr_cursor = make_spr(0, 0, img_cursor)
+
+   set text size 64
+
+   local green as byte
+   local red as byte
+   local blue as byte
+   local rway as integer
+   local bway as integer
+   local cway as integer
+
+   green = rnd(200) + 20
+   red = rnd(200) + 40
+   blue = rnd(200) + 20
+   rway = 1
+   gway = 1
+   bway = 1
+
+   do
+      `move cursor
+      sprite spr_cursor, mousex(), mousey(), img_cursor
+      if sprite x(spr_cursor) + sprite width(spr_cursor) > 640 then sprite spr_cursor, 640 - sprite width(spr_cursor), sprite y(spr_cursor), img_cursor
+      if sprite y(spr_cursor) + sprite height(spr_cursor) > 480 then sprite spr_cursor, sprite x(spr_cursor), 480 - sprite height(spr_cursor), img_cursor
+
+
+      ` highlight selections
+      
+      `play
+      if sprite_collision(spr_cursor, spr_play)
+         set sprite alpha spr_play, 160
+         if mouseclick()
+            hide_menu1()
+            exit
+         endif
+      else
+         set sprite alpha spr_play, 80
+      endif
+      
+      `hi scores
+      if sprite_collision(spr_cursor, spr_scores)
+         set sprite alpha spr_scores, 160
+         if mouseclick()
+            hide_menu2()
+            scores_menu()
+            show_menu2()
+         endif
+      else
+         set sprite alpha spr_scores, 80
+      endif
+
+      `quit
+      if sprite_collision(spr_cursor, spr_quit)
+         if mouseclick() then end
+         set sprite alpha spr_quit, 160
+      else
+         set sprite alpha spr_quit, 80
+      endif
+
+      paste image 1, 0, 0
+
+      ` colors
+      if red = 255 and rway = 1 then rway = -1
+      if red = 0 and rway = -1 then rway = 1
+      if green = 255 and gway = 1 then gway = -1
+      if green = 0 and gway = -1 then gway = 1
+      if blue = 255 and bway = 1 then bway = -1
+      if blue = 0 and bway = -1 then bway = 1
+
+      inc red, rway
+      inc green, gway
+      inc blue, bway
+
+
+      ink rgb(red, green, blue), -1
+      center text screen width() / 2, 100, "Asteroids"
+      sync
+   loop
+
+endfunction
+
+function hide_menu1()
+  delete sprite spr_cursor
+  delete sprite spr_play
+  delete sprite spr_scores
+  delete sprite spr_quit
+  set text size 16
+endfunction
+
+function hide_menu2()
+  hide sprite spr_cursor
+  hide sprite spr_play
+  hide sprite spr_scores
+  hide sprite spr_quit
+  set text size 16
+endfunction
+
+function show_menu2()
+  show sprite spr_cursor
+  show sprite spr_play
+  show sprite spr_scores
+  show sprite spr_quit
+  set text size 64
+endfunction
+
+function sprite_collision(move, stay)
+`calculate center
+x = sprite x(move)
+y = sprite y(move)
+if x > sprite x(stay)
+  if x < sprite x(stay) + sprite width(stay)
+    if y > sprite y(stay)
+      if y < sprite y(stay) + sprite height(stay)
+        exitfunction 1
+      endif
+    endif
+  endif
+endif
+endfunction 0

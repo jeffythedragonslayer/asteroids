@@ -1,0 +1,204 @@
+Rem *** Include File: Library.dba ***
+Rem Created: 10/29/2006 9:20:09 AM
+
+Rem Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Asteroids\Asteroids.dbpro
+
+` finds an unused sprite
+function free_spr()
+   local id as dword
+   repeat
+      inc id
+   until sprite exist(id) = 0
+endfunction id
+
+` finds an unused image
+function free_img()
+   local id as dword
+   repeat
+      inc id
+   until image exist(id) = 0
+endfunction id
+
+` Converts a number into a string with commas separating the thousands
+function cstr$(num as dword)
+   local str as string
+   local length as dword
+   local pos as integer
+   str = str$(num)
+   length = len(str)
+   for pos = length - 3 to 1 step - 3
+      str = left$(str, pos) + "," + right$(str, length - pos)
+      inc length
+   next pos
+endfunction str
+
+rem performes a GET IMAGE command and returns the id number
+function get_img(Left as dword, Top as dword, Right as dword, Bottom as dword, textureflag as boolean)
+   local id as dword
+   id = free_img()
+   get image id, Left, Top, Right, Bottom, textureflag
+endfunction id
+
+rem makes a sprite and returns the id number
+function make_spr(xpos as integer, ypos as integer, image as dword)
+   local id as dword
+   id = free_spr()
+   sprite id, xpos, ypos, image
+endfunction id
+
+rem loads an image and returns the id number
+function load_img(file as string, textureflag as boolean)
+   local id as dword
+   id = free_img()
+   load image file, id, textureflag
+endfunction id
+
+` returns an easy to read form of the date
+function readable_date$(date_str as string)
+   local day_str as string
+   local month_str as string
+   local month_num as dword
+   local year_str as string
+
+   ` is date_str in mm/dd/yyyy or mm/dd/yy form?
+   if len(date_str) = 8
+      year_str = "20" + right$(date_str, 2)
+   else
+      year_str = right$(date_str, 4)
+   endif
+
+   month_num = val(left$(date_str, 2))
+   select month_num
+      case 1
+         month_str = "January"
+      endcase
+      case 2
+         month_str = "February"
+      endcase
+      case 3
+         month_str = "March"
+      endcase
+      case 4
+         month_str = "April"
+      endcase
+      case 5
+         month_str = "May"
+      endcase
+      case 6
+         month_str = "June"
+      endcase
+      case 7
+         month_str = "July"
+      endcase
+      case 8
+         month_str = "August"
+      endcase
+      case 9
+         month_str = "September"
+      endcase
+      case 10
+         month_str = "October"
+      endcase
+      case 11
+         month_str = "November"
+      endcase
+      case 12
+         month_str = "December"
+      endcase
+   endselect
+
+   day_str = str$(val(right$(left$(date_str, 5), 2)))
+
+   date_str = month_str + " " + day_str + ", " + year_str
+
+endfunction date_str
+
+function readable_time$(time_str as string)
+   local hour_num as dword
+   local hour_str as string
+   local minute_str as string
+   local second_str as string
+   local am_pm as string
+
+   ` is time_str in hh:mm:ss form or hh:mm form?
+   if len(time_str) = 8
+      second_str = " (" + right$(time_str, 2) + ")"
+   endif
+
+   minute_str = right$(left$(time_str, 5), 2)
+
+   hour_num = val(left$(time_str, 2))
+   if hour_num > 12
+      dec hour_num, 12
+      am_pm = "pm"
+   else
+      am_pm = "am"
+   endif
+   hour_str = str$(hour_num)
+
+   time_str = hour_str + ":" + minute_str + " " + am_pm + second_str
+
+endfunction time_str
+
+` Extracts individual strings from a comma separated values string
+` Call with comma separated values string, then call with null string in a loop and it
+` will return indivual strings and then "END OF STRING"
+global csv_start as dword
+global csv_values as string
+function csv$(called_values as string)
+
+   if len(called_values)
+      csv_values = called_values
+      csv_start = 1
+      exitfunction ""
+   endif
+
+   local length as dword
+   length = len(csv_values)
+
+   if csv_start > length then exitfunction "END OF STRING"
+
+   local finish as dword
+   local return_value as string
+
+   for finish = csv_start to length
+      if mid$(csv_values, finish) = ","
+         return_value = right$(left$(csv_values, finish - 1), finish - csv_start)
+         csv_start = finish + 1
+         exitfunction return_value
+      endif
+   next finish
+
+   return_value = right$(csv_values, finish - csv_start)
+   csv_start = finish
+   break
+endfunction return_value
+
+` Removes leading and trailing spaces
+remstart
+function trim$(str as string)
+   local pos as dword
+   local length as dword
+   length = len(str)
+   pos = length
+
+   while pos
+      if mid$(str, pos) <> " "
+         str = left$(str, pos)
+         `this is where the exitfunction would be, but instead the ltrim$()
+         ` the length must be resized because the string was just chopped
+         length = pos
+         pos = 1
+         while pos <= length
+            if mid$(str, pos) <> " "
+               dec pos
+               str = right$(str, length - pos)
+               exitfunction str
+            endif
+            inc pos
+         endwhile
+      endif
+      dec pos
+   endwhile
+endfunction ""
+remend
